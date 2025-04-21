@@ -1,3 +1,7 @@
+# RELEASE NOTES
+
+The export and compare work quite well. but import doesn't. it is very comlicated due to references to other objects etc. so i'm happy to not worry about it too much right now
+
 # Shopify Metafields Migration Tool
 
 A powerful CLI tool for managing and migrating Shopify metafield definitions between stores. This tool helps developers and store managers export, compare, and import metafield definitions across different Shopify stores.
