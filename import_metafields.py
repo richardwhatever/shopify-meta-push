@@ -10,7 +10,7 @@ load_dotenv()
 
 GRAPHQL_ENDPOINT = "/admin/api/2025-01/graphql.json"
 
-def graphql_request(store_url, token, query, variables):
+def graphql_request(store_url, token, query, variables, field_name=None):
     endpoint = f"https://{store_url}{GRAPHQL_ENDPOINT}"
     headers = {
         "Content-Type": "application/json",
@@ -26,7 +26,8 @@ def graphql_request(store_url, token, query, variables):
             # Check for access denied errors
             for error in result["errors"]:
                 if "ACCESS_DENIED" in str(error):
-                    print("\n❌ Access Denied Error:")
+                    field_info = f" for field '{field_name}'" if field_name else ""
+                    print(f"\n❌ Access Denied Error{field_info}:")
                     print(f"   {error['message']}")
                     print("\n🔑 Required Access Scopes:")
                     print("   Your API token needs the following access scopes:")
@@ -36,7 +37,8 @@ def graphql_request(store_url, token, query, variables):
                     print("   - write_metaobjects (for metaobjects)")
                     print("\n📚 Documentation: https://shopify.dev/api/usage/access-scopes")
                     print("\n💡 Tip: Create a new custom app in your Shopify admin with the required access scopes.")
-                    sys.exit(1)
+                    # Instead of exiting, return None to indicate failure
+                    return None
             
             raise Exception(f"GraphQL error: {result['errors']}")
         return result["data"]
@@ -58,7 +60,9 @@ def check_metafield_exists(store_url, token, namespace, key):
         result = graphql_request(store_url, token, query, {
             "namespace": namespace,
             "key": key
-        })
+        }, f"{namespace}::{key}")
+        if result is None:  # Access denied
+            return False
         return result.get("metafieldDefinition") is not None
     except Exception:
         return False
@@ -95,7 +99,10 @@ def create_metafield_definition(store_url, token, metafield):
         "validations": metafield.get("validations", [])
     }
 
-    result = graphql_request(store_url, token, mutation, {"definition": input_payload})
+    field_name = f"{metafield['namespace']}::{metafield['key']}"
+    result = graphql_request(store_url, token, mutation, {"definition": input_payload}, field_name)
+    if result is None:  # Access denied
+        return {"userErrors": [{"message": "Access denied"}]}
     return result["metafieldDefinitionCreate"]
 
 def update_metafield_definition(store_url, token, metafield):
@@ -326,6 +333,7 @@ def main():
                 print(f"✅ Created {mf['namespace']}::{mf['key']}")
         except Exception as e:
             print(f"❌ Failed to create {mf['namespace']}::{mf['key']}: {str(e)}")
+            # Continue to the next metafield
 
     print(f"\n🔄 Updating {len(changed_metafields)} changed metafield definitions...")
     for mf in changed_metafields:
@@ -359,6 +367,7 @@ def main():
                 print(f"✅ Created metaobject {mo['name']} with type {new_type}")
         except Exception as e:
             print(f"❌ Failed to create metaobject {mo['name']}: {str(e)}")
+            # Continue to the next metaobject
 
     print(f"\n🔄 Processing {len(changed_metaobjects)} changed metaobject definitions...")
     for mo in changed_metaobjects:
