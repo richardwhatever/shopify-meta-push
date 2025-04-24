@@ -39,7 +39,7 @@ OWNER_TYPES = [
 
 ]
 
-def fetch_metaobject_definitions(store_url, access_token, verbose=False):
+def fetch_metaobject_definitions(store_url, access_token, verbose=False, quiet=False):
     endpoint = f"https://{store_url}{GRAPHQL_ENDPOINT}"
     headers = {
         "Content-Type": "application/json",
@@ -75,7 +75,8 @@ def fetch_metaobject_definitions(store_url, access_token, verbose=False):
     }
     """
 
-    print("\n📦 Fetching metaobject definitions...")
+    if not quiet:
+        print("\n📦 Fetching metaobject definitions...")
     all_definitions = []
     has_next_page = True
     after_cursor = None
@@ -87,7 +88,7 @@ def fetch_metaobject_definitions(store_url, access_token, verbose=False):
                 "after": after_cursor
             } if after_cursor else {}
 
-            if verbose:
+            if verbose and not quiet:
                 print(f"  - Requesting page {page_count + 1} for metaobjects (cursor: {after_cursor})")
 
             response = requests.post(
@@ -99,7 +100,7 @@ def fetch_metaobject_definitions(store_url, access_token, verbose=False):
             response.raise_for_status()
             data = response.json()
 
-            if verbose:
+            if verbose and not quiet:
                 print(f"  - Raw API response: {json.dumps(data, indent=2)}")
 
             if "errors" in data:
@@ -116,7 +117,7 @@ def fetch_metaobject_definitions(store_url, access_token, verbose=False):
                     field['type'] = field['type']['name']
                 all_definitions.append(node)
 
-            if verbose:
+            if verbose and not quiet:
                 print(f"  - Retrieved {len(defs['edges'])} definitions on page {page_count}")
 
             has_next_page = defs['pageInfo']['hasNextPage']
@@ -128,10 +129,11 @@ def fetch_metaobject_definitions(store_url, access_token, verbose=False):
             print(f"⚠️ Error fetching metaobjects: {str(e)}")
             break
 
-    print(f"  ✓ Found {len(all_definitions)} metaobject definitions")
+    if not quiet:
+        print(f"  ✓ Found {len(all_definitions)} metaobject definitions")
     return all_definitions
 
-def fetch_metafield_definitions(store_url, access_token, verbose=False):
+def fetch_metafield_definitions(store_url, access_token, verbose=False, quiet=False):
     endpoint = f"https://{store_url}{GRAPHQL_ENDPOINT}"
     headers = {
         "Content-Type": "application/json",
@@ -161,12 +163,14 @@ def fetch_metafield_definitions(store_url, access_token, verbose=False):
     }
     """
 
-    print("\n📝 Fetching metafield definitions...")
+    if not quiet:
+        print("\n📝 Fetching metafield definitions...")
     all_definitions = []
     owner_type_counts = {}
 
     for owner_type in OWNER_TYPES:
-        print(f"  • Fetching {owner_type}...")
+        if not quiet:
+            print(f"  • Fetching {owner_type}...")
         has_next_page = True
         after_cursor = None
         retry_count = 0
@@ -181,7 +185,7 @@ def fetch_metafield_definitions(store_url, access_token, verbose=False):
                     "ownerType": owner_type
                 }
                 
-                if verbose:
+                if verbose and not quiet:
                     print(f"    - Requesting page {page_count + 1} for {owner_type} (cursor: {after_cursor})")
                 
                 response = requests.post(
@@ -193,7 +197,7 @@ def fetch_metafield_definitions(store_url, access_token, verbose=False):
                 response.raise_for_status()
                 data = response.json()
 
-                if verbose:
+                if verbose and not quiet:
                     print(f"    - Raw API response for {owner_type}: {json.dumps(data, indent=2)}")
 
                 if "errors" in data:
@@ -207,7 +211,7 @@ def fetch_metafield_definitions(store_url, access_token, verbose=False):
                 defs = data['data']['metafieldDefinitions']
                 page_count += 1
                 
-                if verbose:
+                if verbose and not quiet:
                     print(f"    - Retrieved {len(defs['edges'])} definitions on page {page_count}")
                 
                 for edge in defs['edges']:
@@ -219,7 +223,7 @@ def fetch_metafield_definitions(store_url, access_token, verbose=False):
                 has_next_page = defs['pageInfo']['hasNextPage']
                 after_cursor = defs['pageInfo']['endCursor']
                 
-                if verbose and has_next_page:
+                if verbose and not quiet and has_next_page:
                     print(f"    - More pages available for {owner_type}, continuing...")
                 
                 time.sleep(0.5)
@@ -240,14 +244,16 @@ def fetch_metafield_definitions(store_url, access_token, verbose=False):
             print(f"❌ Failed to fetch {owner_type} after {max_retries} attempts")
         
         owner_type_counts[owner_type] = len(owner_type_definitions)
-        print(f"    ✓ Found {len(owner_type_definitions)} definitions")
+        if not quiet:
+            print(f"    ✓ Found {len(owner_type_definitions)} definitions")
         
-        if verbose:
+        if verbose and not quiet:
             print(f"    - Completed {owner_type}: {page_count} pages, {len(owner_type_definitions)} definitions")
 
-    print("\n📊 Summary of metafield definitions:")
-    for owner_type, count in owner_type_counts.items():
-        print(f"  • {owner_type}: {count} definitions")
+    if not quiet:
+        print("\n📊 Summary of metafield definitions:")
+        for owner_type, count in owner_type_counts.items():
+            print(f"  • {owner_type}: {count} definitions")
 
     return all_definitions
 
@@ -258,6 +264,7 @@ def main():
     parser.add_argument("--output", help="Output file path (optional)")
     parser.add_argument("-op", "--output-prefix", help="Prefix for output filenames")
     parser.add_argument("-v", "--verbose", action="store_true", help="Enable verbose output")
+    parser.add_argument("-q", "--quiet", action="store_true", help="Suppress all output except errors")
 
     args = parser.parse_args()
     
@@ -276,7 +283,8 @@ def main():
         if not token:
             raise Exception(f"Missing {store_type} token. Set SHOPIFY_{store_type.upper()}_TOKEN in your .env file.")
 
-        print(f"\n🔄 Starting export from {store_type} store: {store}")
+        if not args.quiet:
+            print(f"\n🔄 Starting export from {store_type} store: {store}")
 
         # Set default output filename if not provided
         output_file = args.output
@@ -285,8 +293,8 @@ def main():
             output_file = f"{prefix}definitions_export_{store_type}.json"
 
         try:
-            metafield_definitions = fetch_metafield_definitions(store, token, args.verbose)
-            metaobject_definitions = fetch_metaobject_definitions(store, token, args.verbose)
+            metafield_definitions = fetch_metafield_definitions(store, token, args.verbose, args.quiet)
+            metaobject_definitions = fetch_metaobject_definitions(store, token, args.verbose, args.quiet)
             
             export_data = {
                 "metafields": metafield_definitions,
@@ -296,10 +304,11 @@ def main():
             with open(output_file, 'w') as f:
                 json.dump(export_data, f, indent=2)
             
-            print(f"\n✅ Export completed for {store_type} store:")
-            print(f"  • {len(metafield_definitions)} metafield definitions")
-            print(f"  • {len(metaobject_definitions)} metaobject definitions")
-            print(f"  • Saved to: {output_file}")
+            if not args.quiet:
+                print(f"\n✅ Export completed for {store_type} store:")
+                print(f"  • {len(metafield_definitions)} metafield definitions")
+                print(f"  • {len(metaobject_definitions)} metaobject definitions")
+                print(f"  • Saved to: {output_file}")
             
         except Exception as e:
             print(f"❌ Error exporting {store_type} store: {e}")

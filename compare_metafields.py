@@ -158,6 +158,7 @@ def main():
     parser.add_argument("--source", default="definitions_export_source.json", help="Source definitions JSON file")
     parser.add_argument("--target", default="definitions_export_target.json", help="Target definitions JSON file")
     parser.add_argument("--output", default="definitions_diff.json", help="Output file for differences")
+    parser.add_argument("-q", "--quiet", action="store_true", help="Suppress all output except errors")
 
     args = parser.parse_args()
 
@@ -172,10 +173,11 @@ def main():
     with open(args.output, 'w') as f:
         json.dump(result, f, indent=2)
 
-    print(f"✅ Comparison done.")
-    print(f"📊 Metafields: {len(result['metafields']['missing'])} missing, {len(result['metafields']['changed'])} changed.")
-    print(f"📊 Metaobjects: {len(result['metaobjects']['missing'])} missing, {len(result['metaobjects']['changed'])} changed.")
-    print(f"📁 Output saved to {args.output}")
+    if not args.quiet:
+        print(f"✅ Comparison done.")
+        print(f"📊 Metafields: {len(result['metafields']['missing'])} missing, {len(result['metafields']['changed'])} changed.")
+        print(f"📊 Metaobjects: {len(result['metaobjects']['missing'])} missing, {len(result['metaobjects']['changed'])} changed.")
+        print(f"📁 Output saved to {args.output}")
 
 
 if __name__ == "__main__":
