@@ -170,11 +170,11 @@ def display_metafields(json_file):
         print(f"An error occurred: {str(e)}")
 
 if __name__ == "__main__":
-    # Default to "metafield_diff.json" if no argument is provided
+    # Default to "definitions_diff.json" if no argument is provided
     if len(sys.argv) > 1:
         json_file = sys.argv[1]
     else:
-        json_file = "metafield_diff.json"
+        json_file = "definitions_diff.json"
         print(f"No file specified, using default: {json_file}")
     
     display_metafields(json_file) 

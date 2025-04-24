@@ -155,9 +155,9 @@ def compare_definitions(source_metafields, source_metaobjects, target_metafields
 
 def main():
     parser = argparse.ArgumentParser(description="Compare metafield and metaobject definitions between two stores")
-    parser.add_argument("source", help="Source definitions JSON file")
-    parser.add_argument("target", help="Target definitions JSON file")
-    parser.add_argument("--output", default="metafield_diff.json", help="Output file for differences")
+    parser.add_argument("--source", default="definitions_export_source.json", help="Source definitions JSON file")
+    parser.add_argument("--target", default="definitions_export_target.json", help="Target definitions JSON file")
+    parser.add_argument("--output", default="definitions_diff.json", help="Output file for differences")
 
     args = parser.parse_args()
 
